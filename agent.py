@@ -17,26 +17,25 @@ class Agent(object):
                 self.G[(i, j)] = 0
                 # np.random.uniform(low=1.0, high=0.1)
 
-    def greedy_policy(self, state, action_space):
+    def greedy_policy(self, Qtable, state, action_space):
         max_val  = -10e15
         best_action = None
         for action in action_space:
-            new_state = tuple([sum(x) for x in zip(state, ACTIONS[action])])
-            if self.G[new_state] >= max_val:
+            if Qtable[state][action] >= max_val:
                 best_action = action
-                max_val = self.G[new_state]
+                max_val = Qtable[state][action]
         
         return best_action
         
         
     
-    def epsilon_greedy_policy(self, state, epsilon, action_space):
+    def epsilon_greedy_policy(self, Qtable, state, epsilon, action_space):
         # Randomly generate a number between 0 and 1
         random_num = random.uniform(0,1)
         # if random_num > greater than epsilon --> exploitation
         if random_num > epsilon:
             # Take the action with the highest value given a state
-            action = self.greedy_policy(state, action_space)
+            action = self.greedy_policy(Qtable, state, action_space)
             # print("learned action")
         # else --> exploration
         else:
@@ -46,21 +45,21 @@ class Agent(object):
         return action
     
         #for readability
-    def choose_action(self, state, epsilon, action_space):
-        return self.epsilon_greedy_policy(state, epsilon, action_space)
+    def choose_action(self, Qtable, state, epsilon, action_space):
+        return self.epsilon_greedy_policy(Qtable, state, epsilon, action_space)
     
-    def update_state_history(self, state, reward):
-        self.state_history.append((state, reward))
+    # def update_state_history(self, state, reward):
+    #     self.state_history.append((state, reward))
 
     
-    def learn(self):
-        target = 0
+    # def learn(self):
+    #     target = 0
 
-        for prev, reward in reversed(self.state_history):
-            self.G[prev] = self.G[prev] + self.alpha * (target - self.G[prev])
-            target += reward
+    #     for prev, reward in reversed(self.state_history):
+    #         self.G[prev] = self.G[prev] + self.alpha * (target - self.G[prev])
+    #         target += reward
 
-        self.state_history = []
+    #     self.state_history = []
 
     
     

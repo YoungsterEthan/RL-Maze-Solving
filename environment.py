@@ -9,7 +9,7 @@ class Maze(object):
         self.rows = 0
         self.columns = 0
         self.create_maze_from_string(maze_str)
-        self.robot_position = (0, 0) # current robot position
+        self.robot_position = (0,0) # current robot position
         self.steps = 0 # contains num steps robot took
         self.allowed_states = [] # for now, this is none
         self.visited_states = set()
@@ -46,9 +46,9 @@ class Maze(object):
     
     def reset(self):
         self.create_maze_from_string(self.m_str)
-        self.robot_position = (0, 0)
+        self.robot_position = (0,0)
         self.visited_states = set()
-        return (0,0)
+        return 0
     
     def print_last_five_states(self):
             print("Last Five States of the Maze:")
@@ -63,10 +63,11 @@ class Maze(object):
             for x, col in enumerate(row):
                 # iterate through all spaces
                 if self.maze[(y,x)] != 1:
-                    allowed_states[(y,x)] = []
+                    state = (y * self.rows) + x
+                    allowed_states[state] = []
                     for action in ACTIONS:
                         if self.is_allowed_move((y,x), action):
-                            allowed_states[(y,x)].append(action)
+                            allowed_states[state].append(action)
         self.allowed_states = allowed_states
 
     def is_allowed_move(self, state, action):
@@ -88,7 +89,7 @@ class Maze(object):
         y += ACTIONS[action][0]
         x += ACTIONS[action][1]
         self.robot_position = (y, x)
-        new_state = (y,x)
+        new_state = (y * self.rows) + x
 
         status = 'normal'
         # Check if new position is a goal or a kill spot
