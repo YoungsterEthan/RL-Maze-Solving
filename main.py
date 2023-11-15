@@ -47,23 +47,39 @@ def train(agent:Agent, env:Maze, Qtable, n_training_episodes, min_epsilon, max_e
         if show_result:
             env.print_last_five_states()
 
-    return agent.G, deaths, wins
+    return Qtable, deaths, wins
 
+# environment = """
+# A0001x1000
+# 0000101000
+# 0000000001
+# 1000000000
+# 1111000000
+# G00x000000
+# 000x000100
+# 0000000100
+# 0000010100
+# 000000x000
+# """
 environment = """
-A0001x1000
-0000101000
-0000000001
-1000000000
-1111000000
-G00x000000
-000x000100
-0000000100
-0000010100
-000000x000
+A000000000
+0000000000
+0000000000
+000xxx0000
+10xxGxx000
+10xx00x000
+0000000000
+0000000000
+0011110000
+0000x00000
 """
+
 def print_Q(Q):
-    for k,v in Q.items():
-        print(k, v)
+    for i, state in enumerate(Q):
+        y = i // 10
+        x = i % 10
+        print(f'({y},{x}): {state}')
+        
 
 
 if __name__ == "__main__":
@@ -75,8 +91,8 @@ if __name__ == "__main__":
     decay_rate = 0.0005            # Exponential decay rate for exploration prob
     n_training_episodes = 1000
     max_steps = 500
-    G, deaths, wins = train(agent, env, Qtable, n_training_episodes, min_epsilon, max_epsilon, decay_rate, max_steps) 
-    print_Q(G)
+    Qtable, deaths, wins = train(agent, env, Qtable, n_training_episodes, min_epsilon, max_epsilon, decay_rate, max_steps) 
+    print_Q(Qtable)
     print('Total deaths:', deaths)
     print('Total wins:', wins)
     print('Total timeouts:', n_training_episodes - deaths - wins)
