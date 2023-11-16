@@ -1,5 +1,6 @@
 import numpy as np
 from collections import deque
+import random
 
 ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 
@@ -8,6 +9,7 @@ class Maze(object):
         self.m_str = maze_str
         self.rows = 0
         self.columns = 0
+        self.enemy_positions = []
         self.create_maze_from_string(maze_str)
         self.robot_position = (0,0) # current robot position
         self.steps = 0 # contains num steps robot took
@@ -43,8 +45,11 @@ class Maze(object):
             for j in range(len(char_list[0])):
                 # print(char_list[i][j])
                 self.maze[i,j] = char_to_int[char_list[i][j]]
+                if self.maze[i,j] == 2:
+                    self.enemy_positions.append((i,j))
     
     def reset(self):
+        self.enemy_positions = []
         self.create_maze_from_string(self.m_str)
         self.robot_position = (0,0)
         self.visited_states = set()
@@ -83,7 +88,23 @@ class Maze(object):
         else:
             return False
         
+    def enemy_move(self):
+        for i, enemy in enumerate(self.enemy_positions):
+            dy, dx = self.random_valid_direction(enemy)
+            y, x = enemy
+
+            # Update the maze
+            self.maze[y, x] = 0  # Set the current position to empty
+            new_position = (y + dy, x + dx)
+            self.maze[new_position[0], new_position[1]] = 2  # Move the enemy to the new position
+
+            # Update the position in the list
+            self.enemy_positions[i] = new_position
+
+            
+        
     def update_maze(self, action):
+        self.enemy_move()
         y, x = self.robot_position
         self.maze[y, x] = 0  # set the current position to empty
         y += ACTIONS[action][0]
@@ -143,6 +164,32 @@ class Maze(object):
         
     def get_state_and_reward(self):
         return self.robot_position, self.give_reward()
+    
+    #logic for enemies valid moves
+    def _get_valid_directions(self, enemy_position):
+        enemy_row, enemy_col = enemy_position
+
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        
+
+        valid_directions = []
+        # print(f'CURRENT POSITION: {enemy_position}')
+        for d in directions:
+            # print("DIRECTION", d)
+            new_row = enemy_row + d[0]
+            new_col = enemy_col + d[1]
+            # print(f'NEW POSITION {new_row, new_col}')
+            if (0 <= new_row < self.rows) and (0 <= new_col < self.columns) and (self.maze[new_row, new_col] == 0):
+                # print("TRUE")
+                valid_directions.append(d)
+
+        return valid_directions
+
+    def random_valid_direction(self, enemy_position):
+        valid_directions = self._get_valid_directions(enemy_position)
+        # print("VALID DIRECTIONS FOR", enemy_position, valid_directions)
+        return random.choice(valid_directions) if valid_directions else (0,0)
+
 
         
 

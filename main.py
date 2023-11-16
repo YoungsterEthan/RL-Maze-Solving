@@ -33,7 +33,6 @@ def train(agent:Agent, env:Maze, Qtable, n_training_episodes, min_epsilon, max_e
                 deaths += 1
                 print("The agent has died at step", step)
                 # show_result = True
-
             elif status == "goal":
                 wins +=1
                 print("The agent has won at step", step)
@@ -62,16 +61,16 @@ def train(agent:Agent, env:Maze, Qtable, n_training_episodes, min_epsilon, max_e
 # 000000x000
 # """
 environment = """
-A000000000
+A00000000x
 0000000000
 0000000000
-000xxx0000
-10xxGxx000
-10xx00x000
+0011111000
+0010G01000
+0010001000
 0000000000
 0000000000
-0011110000
-0000x00000
+0000000000
+x00000000x
 """
 
 def print_Q(Q):
