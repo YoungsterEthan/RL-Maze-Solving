@@ -104,7 +104,7 @@ class Maze(object):
             
         
     def update_maze(self, action):
-        self.enemy_move()
+        # self.enemy_move()
         y, x = self.robot_position
         self.maze[y, x] = 0  # set the current position to empty
 

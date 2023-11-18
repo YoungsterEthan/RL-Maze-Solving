@@ -25,8 +25,8 @@ class Agent(object):
     def __init__(self, state_size, action_size, alpha=0.7):
         self.state_history = []
         self.alpha = alpha
-        self.batch_size = 25
-        self.replayBuffer = ExperienceReplay(50, self.batch_size)
+        self.batch_size = 64
+        self.replayBuffer = ExperienceReplay(1000, self.batch_size)
         self.n_actions = action_size
         self.lr = 0.001
         self.model = DQNN(state_size, action_size)
@@ -60,7 +60,7 @@ class Agent(object):
             action = torch.argmax(q_values).item()  # Get the action with the highest Q-value
         else:
             action = np.random.choice(range(self.n_actions))
-            # print("RANDOM ACTION:", action)
+            # print("Random")
 
         return action
     

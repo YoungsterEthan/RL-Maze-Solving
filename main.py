@@ -44,7 +44,7 @@ if __name__ == "__main__":
     agent = Agent(100,4)
     max_epsilon = 1.0             # Exploration probability at start
     min_epsilon = 0.05            # Minimum exploration probability
-    decay_rate = 0.0005            # Exponential decay rate for exploration prob
+    decay_rate = 0.005            # Exponential decay rate for exploration prob
     n_training_episodes = 1000
     max_steps = 500
     total_steps = 0
@@ -81,6 +81,7 @@ if __name__ == "__main__":
                 if _ == "dead":
                     deaths+=1
                 elif _ == "goal":
+                    env.print_last_five_states()
                     wins+=1
 
                 # env.print_last_five_states()
