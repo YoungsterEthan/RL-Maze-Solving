@@ -76,7 +76,7 @@ class Maze(object):
         self.allowed_states = allowed_states
 
     def is_allowed_move(self, state, action):
-        y, x = state
+        y, x = state // 10, state % 10 
         y += ACTIONS[action][0]
         x += ACTIONS[action][1]
         # moving off the board
@@ -107,6 +107,7 @@ class Maze(object):
         self.enemy_move()
         y, x = self.robot_position
         self.maze[y, x] = 0  # set the current position to empty
+
         y += ACTIONS[action][0]
         x += ACTIONS[action][1]
         self.robot_position = (y, x)
