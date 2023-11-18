@@ -153,7 +153,7 @@ class Maze(object):
         self.last_five_states.append(np.copy(self.maze))
         reward = self.give_reward(status, new_state)
         is_over = self.is_game_over(status)
-        return new_state, reward, status, is_over
+        return new_state, reward, is_over, status
 
     def is_game_over(self, status):
         if status == 'dead' or status == 'goal':
