@@ -48,21 +48,20 @@ class Agent(object):
         
     
     def epsilon_greedy_policy(self, state):
-
-        state_tensor = torch.tensor([state], dtype=torch.float32)
-        state_tensor = F.one_hot(state_tensor.long(), num_classes=100).float()  # One-hot encoding to match the input size
+        # Directly convert the state to a tensor
+        state_tensor = torch.tensor(state, dtype=torch.int64)  # Convert state to tensor
+        state_tensor = F.one_hot(state_tensor, num_classes=100).float().unsqueeze(0)  # One-hot encoding
 
         random_num = random.uniform(0,1)
         if random_num > self.epsilon:
-            # print("Learned")
             with torch.no_grad():  # Turn off gradient tracking for inference
                 q_values = self.model(state_tensor)
             action = torch.argmax(q_values).item()  # Get the action with the highest Q-value
         else:
             action = np.random.choice(range(self.n_actions))
-            # print("Random")
 
         return action
+
     
     #for readability
     def choose_action(self, state):
@@ -76,15 +75,13 @@ class Agent(object):
     
     def train(self):
         self.model.train()
-        
-        # We iterate over the selected experiences
         for experience in self.replayBuffer.sample():
-        # Assuming state is a single integer, convert it to a tensor of shape [1, state_size]
-            state = torch.tensor([experience["state"]], dtype=torch.float32)
-            state = F.one_hot(state.long(), num_classes=100).float()  # One-hot encoding to match the input size
+            state = torch.tensor(experience["state"], dtype=torch.int64)
+            state = F.one_hot(state, num_classes=100).float().unsqueeze(0)
 
-            next_state = torch.tensor([experience["new_state"]], dtype=torch.float32)
-            next_state = F.one_hot(next_state.long(), num_classes=100).float()
+            next_state = torch.tensor(experience["new_state"], dtype=torch.int64)
+            next_state = F.one_hot(next_state, num_classes=100).float().unsqueeze(0)
+
             action = experience["action"]
             reward = experience["reward"]
             done = experience["done"]
@@ -95,17 +92,11 @@ class Agent(object):
 
             q_target[0][0][action] = reward + self.gamma * torch.max(q_next) * (not done)
 
-            # Zero the gradients
             self.optimizer.zero_grad()
-
-            # Compute loss
             loss = self.loss_function(q_current, q_target)
-
-            # Backpropagate
             loss.backward()
-
-            # Update model weights
             self.optimizer.step()
+
 
 
 
