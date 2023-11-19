@@ -28,7 +28,7 @@ def visualize_q_values(agent, num_rows, num_columns):
         plt.title(f"Q-values for Action: {action}")
         plt.show()
 
-def visualize_policy(agent, num_rows, num_columns):
+def visualize_policy(agent, num_rows, num_columns, env):
     policy_grid = np.zeros((num_rows, num_columns), dtype=str)
 
     for row in range(num_rows):
@@ -40,6 +40,10 @@ def visualize_policy(agent, num_rows, num_columns):
             with torch.no_grad():
                 q_values = agent.model(state_tensor)
             best_action = np.argmax(q_values.numpy())
+
+            if env.maze[row, col] == 1 or env.maze[row, col] == 3 or env.maze[row, col] == 2:
+                policy_grid[row, col] = env.maze[row, col]
+                continue
 
             # Represent the action in a human-readable way
             if best_action == 0:
@@ -81,7 +85,7 @@ if __name__ == "__main__":
     max_epsilon = 1.0             # Exploration probability at start
     min_epsilon = 0.05            # Minimum exploration probability
     decay_rate = 0.005            # Exponential decay rate for exploration prob
-    n_training_episodes = 2000
+    n_training_episodes = 5000
     max_steps = 500
     total_steps = 0
     deaths = 0
@@ -91,6 +95,7 @@ if __name__ == "__main__":
     for e in range(n_training_episodes):
         # We initialize the first state and reshape it to fit 
         #  with the input layer of the DNN
+        print(e)
 
         current_state = env.reset()
         current_state = np.array([current_state])
@@ -110,13 +115,14 @@ if __name__ == "__main__":
             agent.add_experience(current_state, action, reward, next_state, done)
             
             # if the episode is ended, we leave the loop after
-            # updating the exploration probability
+            # updating the exploration probabiplity
             if done:
                 # print("Status:", _)
                 if _ == "dead":
                     deaths+=1
                 elif _ == "goal":
-                    # env.print_last_five_states()
+                    # print("Goal in", step, "steps")
+                    env.print_last_five_states()
                     wins+=1
 
                 # env.print_last_five_states()
@@ -132,6 +138,6 @@ if __name__ == "__main__":
     print("Total deaths:", deaths)
     print("Total timeouts:", n_training_episodes - wins - deaths)
     # Call this function with your agent and environment dimensions
-    visualize_policy(agent, env.rows, env.columns)
+    # visualize_policy(agent, env.rows, env.columns, env)
 
 

@@ -35,7 +35,8 @@ class Agent(object):
 
         self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_decay = 0.0005
+        self.epsilon_decay = 0.005
+        self.min_epsilon = 0.05
 
     
 
@@ -69,6 +70,8 @@ class Agent(object):
     
     def update_exploration_probability(self):
         self.epsilon = self.epsilon * np.exp(-self.epsilon_decay)
+        if self.epsilon < self.min_epsilon:
+            self.epsilon = self.min_epsilon
 
     def add_experience(self, state, action, reward, new_state, done):
         self.replayBuffer.add_experience(state, action, reward, new_state, done)
@@ -89,6 +92,7 @@ class Agent(object):
             q_current = self.model(state)
             q_next = self.model(next_state).detach()
             q_target = q_current.clone()
+            # print("Q_TARGET for state:", experience["state"], q_target)
 
             q_target[0][0][action] = reward + self.gamma * torch.max(q_next) * (not done)
 
