@@ -6,100 +6,124 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 # Define a simple neural network in PyTorch equivalent to the TensorFlow code provided
-class DQNN(nn.Module):
-    def __init__(self, state_size, action_size):
-        super(DQNN, self).__init__()
-        self.layer1 = nn.Linear(state_size, 24)  # First dense layer with 24 units
-        self.layer2 = nn.Linear(24, 24)          # Second dense layer with 24 units
-        self.output_layer = nn.Linear(24, action_size)  # Output layer
+class DeepQNetwork(nn.Module):
+    def __init__(self, lr, input_dims, fc1_dims, fc2_dims,
+                 n_actions):
+        super(DeepQNetwork, self).__init__()
+        self.input_dims = input_dims
+        self.fc1_dims = fc1_dims
+        self.fc2_dims = fc2_dims
+        self.n_actions = n_actions
+        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
+        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
+        self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
 
-    def forward(self, x):
-        x = torch.relu(self.layer1(x))  # Apply ReLU activation to the first layer
-        x = torch.relu(self.layer2(x))  # Apply ReLU activation to the second layer
-        x = self.output_layer(x)        # Linear activation for the output layer
-        return x
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        self.loss = nn.MSELoss()
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
 
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        actions = self.fc3(x)
+
+        return actions
+    
 ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 
 class Agent(object):
-    def __init__(self, state_size, action_size, alpha=0.7):
-        self.state_history = []
-        self.alpha = alpha
-        self.batch_size = 64
-        self.replayBuffer = ExperienceReplay(1000, self.batch_size)
-        self.n_actions = action_size
-        self.lr = 0.001
-        self.model = DQNN(state_size, action_size)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-        self.loss_function = torch.nn.MSELoss()
+    def __init__(self, gamma, epsilon, lr, input_dims, batch_size, n_actions,
+                 max_mem_size=100000, eps_end=0.05, eps_dec=5e-4):
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.eps_min = eps_end
+        self.eps_dec = eps_dec
+        self.lr = lr
+        self.action_space = [i for i in range(n_actions)]
+        self.mem_size = max_mem_size
+        self.batch_size = batch_size
+        self.mem_cntr = 0
+        self.iter_cntr = 0
+        self.replace_target = 100
 
-        self.gamma = 0.99
-        self.epsilon = 1.0
-        self.epsilon_decay = 0.005
-        self.min_epsilon = 0.05
+        self.Q_eval = DeepQNetwork(lr, n_actions=n_actions,
+                                   input_dims=input_dims,
+                                   fc1_dims=256, fc2_dims=256)
+        self.state_memory = np.zeros((self.mem_size, *input_dims),
+                                     dtype=np.float32)
+        self.new_state_memory = np.zeros((self.mem_size, *input_dims),
+                                         dtype=np.float32)
+        self.action_memory = np.zeros(self.mem_size, dtype=np.int32)
+        self.reward_memory = np.zeros(self.mem_size, dtype=np.float32)
+        self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool_)
 
-    
-
-    # def greedy_policy(self, state):
-    #     state_tensor = torch.tensor(state, dtype=torch.float32)
-    #     q_values = F.one_hot(state_tensor.long(), num_classes=100).float()
-    #     q_current = self.model(q_values)
-
-    #     return torch.max(q_current)
-        
-    
-    def epsilon_greedy_policy(self, state):
-        # Directly convert the state to a tensor
-        state_tensor = torch.tensor(state, dtype=torch.int64)  # Convert state to tensor
-        state_tensor = F.one_hot(state_tensor, num_classes=100).float().unsqueeze(0)  # One-hot encoding
-
-        random_num = random.uniform(0,1)
-        if random_num > self.epsilon:
-            with torch.no_grad():  # Turn off gradient tracking for inference
-                q_values = self.model(state_tensor)
-            action = torch.argmax(q_values).item()  # Get the action with the highest Q-value
-        else:
-            action = np.random.choice(range(self.n_actions))
-
-        return action
 
     
     #for readability
-    def choose_action(self, state):
-        return self.epsilon_greedy_policy(state)
+    def choose_action(self, observation):
+        if np.random.random() > self.epsilon:
+            observation = np.float32(observation)
+            state = torch.tensor([observation]).to(self.Q_eval.device)
+            actions = self.Q_eval.forward(state)
+            action = torch.argmax(actions).item()
+        else:
+            action = np.random.choice(self.action_space)
+
+        return action
     
-    def update_exploration_probability(self):
-        self.epsilon = self.epsilon * np.exp(-self.epsilon_decay)
-        if self.epsilon < self.min_epsilon:
-            self.epsilon = self.min_epsilon
+    # def update_exploration_probability(self):
+    #     self.epsilon = self.epsilon * np.exp(-self.epsilon_decay)
+    #     if self.epsilon < self.min_epsilon:
+    #         self.epsilon = self.min_epsilon
 
-    def add_experience(self, state, action, reward, new_state, done):
-        self.replayBuffer.add_experience(state, action, reward, new_state, done)
+    def store_transition(self, state, action, reward, state_, terminal):
+        state = np.float32(state)
+        state_ = np.float32(state_)
+        reward = np.float32(reward)
+        index = self.mem_cntr % self.mem_size
+        self.state_memory[index] = state
+        self.new_state_memory[index] = state_
+        self.reward_memory[index] = reward
+        self.action_memory[index] = action
+        self.terminal_memory[index] = terminal
+
+        self.mem_cntr += 1
     
-    def train(self):
-        self.model.train()
-        for experience in self.replayBuffer.sample():
-            state = torch.tensor(experience["state"], dtype=torch.int64)
-            state = F.one_hot(state, num_classes=100).float().unsqueeze(0)
+    def learn(self):
+        if self.mem_cntr < self.batch_size:
+            return
 
-            next_state = torch.tensor(experience["new_state"], dtype=torch.int64)
-            next_state = F.one_hot(next_state, num_classes=100).float().unsqueeze(0)
+        self.Q_eval.optimizer.zero_grad()
 
-            action = experience["action"]
-            reward = experience["reward"]
-            done = experience["done"]
+        max_mem = min(self.mem_cntr, self.mem_size)
 
-            q_current = self.model(state)
-            q_next = self.model(next_state).detach()
-            q_target = q_current.clone()
-            # print("Q_TARGET for state:", experience["state"], q_target)
+        batch = np.random.choice(max_mem, self.batch_size, replace=False)
+        batch_index = np.arange(self.batch_size, dtype=np.int32)
 
-            q_target[0][0][action] = reward + self.gamma * torch.max(q_next) * (not done)
+        state_batch = torch.tensor(self.state_memory[batch]).to(self.Q_eval.device)
+        new_state_batch = torch.tensor(
+                self.new_state_memory[batch]).to(self.Q_eval.device)
+        action_batch = self.action_memory[batch]
+        reward_batch = torch.tensor(
+                self.reward_memory[batch]).to(self.Q_eval.device)
+        terminal_batch = torch.tensor(
+                self.terminal_memory[batch]).to(self.Q_eval.device)
 
-            self.optimizer.zero_grad()
-            loss = self.loss_function(q_current, q_target)
-            loss.backward()
-            self.optimizer.step()
+
+        q_eval = self.Q_eval.forward(state_batch)[batch_index, action_batch]
+        q_next = self.Q_eval.forward(new_state_batch)
+        q_next[terminal_batch] = 0.0
+
+        q_target = reward_batch + self.gamma*torch.max(q_next, dim=1)[0]
+
+        loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
+        loss.backward()
+        self.Q_eval.optimizer.step()
+
+        self.iter_cntr += 1
+        self.epsilon = self.epsilon - self.eps_dec \
+            if self.epsilon > self.eps_min else self.eps_min
 
 
 

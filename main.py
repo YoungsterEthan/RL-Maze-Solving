@@ -7,6 +7,8 @@ import torch
 import torch.nn.functional as F
 import seaborn as sns
 
+
+
 def visualize_q_values(agent, num_rows, num_columns):
     # Assuming your Q-values are stored in the agent's model
     # and can be accessed for each state
@@ -81,10 +83,11 @@ x00000000x
 
 if __name__ == "__main__":
     env = Maze(environment)
-    agent = Agent(100,4)
+    
     max_epsilon = 1.0             # Exploration probability at start
     min_epsilon = 0.05            # Minimum exploration probability
     decay_rate = 0.005            # Exponential decay rate for exploration prob
+    agent = Agent(gamma=0.99, epsilon=1.0, lr=0.001, input_dims=[1], n_actions=4, batch_size=64)
     n_training_episodes = 5000
     max_steps = 500
     total_steps = 0
@@ -95,49 +98,34 @@ if __name__ == "__main__":
     for e in range(n_training_episodes):
         # We initialize the first state and reshape it to fit 
         #  with the input layer of the DNN
-        print(e)
+        if e % 1000 == 0:
+            print(e)
 
         current_state = env.reset()
-        current_state = np.array([current_state])
         for step in range(max_steps):
             total_steps = total_steps + 1
-            # the agent computes the action to perform
             action = agent.choose_action(current_state)
             while not env.is_allowed_move(current_state, action):
                 action = agent.choose_action(current_state)
 
-            # the envrionment runs the action and returns
-            # the next state, a reward and whether the agent is done
             next_state, reward, done, _ = env.step(action)
-            next_state = np.array([next_state])
+            agent.store_transition(current_state, action, reward, next_state, done)
             
-            # We sotre each experience in the memory buffer
-            agent.add_experience(current_state, action, reward, next_state, done)
-            
-            # if the episode is ended, we leave the loop after
-            # updating the exploration probabiplity
             if done:
-                # print("Status:", _)
+                print("Status:", _)
                 if _ == "dead":
                     deaths+=1
                 elif _ == "goal":
-                    # print("Goal in", step, "steps")
-                    env.print_last_five_states()
                     wins+=1
-
-                # env.print_last_five_states()
-                agent.update_exploration_probability()
                 break
+            agent.learn()
             current_state = next_state
-        # if the have at least batch_size experiences in the memory buffer
-        # than we train our model
-        if total_steps >= agent.batch_size:
-            agent.train()
+  
     
     print("Total wins:", wins)
     print("Total deaths:", deaths)
     print("Total timeouts:", n_training_episodes - wins - deaths)
     # Call this function with your agent and environment dimensions
-    # visualize_policy(agent, env.rows, env.columns, env)
+    visualize_policy(agent, env.rows, env.columns, env)
 
 
