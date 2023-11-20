@@ -34,7 +34,7 @@ ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 
 class Agent(object):
     def __init__(self, gamma, epsilon, lr, input_dims, batch_size, n_actions,
-                 max_mem_size=100000, eps_end=0.05, eps_dec=5e-4):
+                 max_mem_size=100, eps_end=0.05, eps_dec=5e-4):
         self.gamma = gamma
         self.epsilon = epsilon
         self.eps_min = eps_end
@@ -50,6 +50,11 @@ class Agent(object):
         self.Q_eval = DeepQNetwork(lr, n_actions=n_actions,
                                    input_dims=input_dims,
                                    fc1_dims=256, fc2_dims=256)
+        
+        self.Q_target = DeepQNetwork(lr, n_actions=n_actions,
+                                   input_dims=input_dims,
+                                   fc1_dims=256, fc2_dims=256)
+        
         self.state_memory = np.zeros((self.mem_size, *input_dims),
                                      dtype=np.float32)
         self.new_state_memory = np.zeros((self.mem_size, *input_dims),
@@ -72,10 +77,10 @@ class Agent(object):
 
         return action
     
-    # def update_exploration_probability(self):
-    #     self.epsilon = self.epsilon * np.exp(-self.epsilon_decay)
-    #     if self.epsilon < self.min_epsilon:
-    #         self.epsilon = self.min_epsilon
+    def update_exploration_probability(self):
+        self.epsilon = self.epsilon * np.exp(-self.eps_dec)
+        if self.epsilon < self.eps_min:
+            self.epsilon = self.eps_min
 
     def store_transition(self, state, action, reward, state_, terminal):
         state = np.float32(state)
@@ -97,33 +102,34 @@ class Agent(object):
         self.Q_eval.optimizer.zero_grad()
 
         max_mem = min(self.mem_cntr, self.mem_size)
-
         batch = np.random.choice(max_mem, self.batch_size, replace=False)
         batch_index = np.arange(self.batch_size, dtype=np.int32)
 
         state_batch = torch.tensor(self.state_memory[batch]).to(self.Q_eval.device)
-        new_state_batch = torch.tensor(
-                self.new_state_memory[batch]).to(self.Q_eval.device)
+        new_state_batch = torch.tensor(self.new_state_memory[batch]).to(self.Q_eval.device)
         action_batch = self.action_memory[batch]
-        reward_batch = torch.tensor(
-                self.reward_memory[batch]).to(self.Q_eval.device)
-        terminal_batch = torch.tensor(
-                self.terminal_memory[batch]).to(self.Q_eval.device)
-
+        reward_batch = torch.tensor(self.reward_memory[batch]).to(self.Q_eval.device)
+        terminal_batch = torch.tensor(self.terminal_memory[batch]).to(self.Q_eval.device)
 
         q_eval = self.Q_eval.forward(state_batch)[batch_index, action_batch]
-        q_next = self.Q_eval.forward(new_state_batch)
+
+        # DDQN Change: select the action according to Q_eval
+        q_eval_next = self.Q_eval.forward(new_state_batch)
+        max_actions = torch.argmax(q_eval_next, dim=1)
+
+        # DDQN Change: get the Q value for the chosen action from Q_target
+        q_next = self.Q_target.forward(new_state_batch)
         q_next[terminal_batch] = 0.0
 
-        q_target = reward_batch + self.gamma*torch.max(q_next, dim=1)[0]
+        q_target = reward_batch + self.gamma * q_next[batch_index, max_actions]
 
         loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
         loss.backward()
         self.Q_eval.optimizer.step()
 
         self.iter_cntr += 1
-        self.epsilon = self.epsilon - self.eps_dec \
-            if self.epsilon > self.eps_min else self.eps_min
+        self.update_exploration_probability()
+
 
 
 

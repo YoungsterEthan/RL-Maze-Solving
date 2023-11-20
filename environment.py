@@ -4,6 +4,10 @@ import random
 
 ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 
+
+
+
+
 class Maze(object):
     def __init__(self,maze_str):
         self.m_str = maze_str
@@ -50,6 +54,7 @@ class Maze(object):
     
     def reset(self):
         self.enemy_positions = []
+        self.steps = 0
         self.create_maze_from_string(self.m_str)
         self.robot_position = (0,0)
         self.visited_states = set()
@@ -135,7 +140,7 @@ class Maze(object):
 
     def give_reward(self, status, new_state):
         # status = self.update_maze()  
-        time_penalty = self.time_decay_penalty()
+        # time_penalty = self.time_decay_penalty()
         explore_reward = 0
         if new_state not in self.visited_states:
             explore_reward = 2  # Small positive reward for exploring a new state
