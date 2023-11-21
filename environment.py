@@ -81,7 +81,7 @@ class Maze(object):
         self.allowed_states = allowed_states
 
     def is_allowed_move(self, state, action):
-        y, x = state // 10, state % 10 
+        y, x = state // self.rows, state % self.columns
         y += ACTIONS[action][0]
         x += ACTIONS[action][1]
         # moving off the board
@@ -109,9 +109,11 @@ class Maze(object):
             
         
     def update_maze(self, action):
-        # self.enemy_move()
         y, x = self.robot_position
         self.maze[y, x] = 0  # set the current position to empty
+        # self.enemy_move()
+        
+        
 
         y += ACTIONS[action][0]
         x += ACTIONS[action][1]
@@ -135,7 +137,7 @@ class Maze(object):
     
     def time_decay_penalty(self):
         # Decrease the reward every 100 steps
-        penalty = -1 - (self.steps // 100)
+        penalty = -1 - (self.steps // 5)
         return penalty
 
     def give_reward(self, status, new_state):

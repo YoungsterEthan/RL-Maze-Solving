@@ -11,18 +11,25 @@ from utils import plotLearning
 ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 action_to_int = {'U': 0, 'D': 1, 'L': 2, 'R': 3}
 
+# environment = """
+# A00000000x
+# 0000000000
+# 0000000000
+# 0011111000
+# 0010G01000
+# 0010001000
+# 0000000000
+# 0000000000
+# 0000000000
+# x00000000x
+# """
+
 environment = """
-A00000000x
-0000000000
-0000000000
-0011111000
-0010G01000
-0010001000
-0000000000
-0000000000
-0000000000
-x00000000x
+A00
+000
+x0G
 """
+
 
 def train(agent, env, n_episodes, n_steps, plot, filename):
     deaths = 0
@@ -35,6 +42,7 @@ def train(agent, env, n_episodes, n_steps, plot, filename):
         done = False
         observation = env.reset()
         while not done and step < n_steps:
+            print(step)
             action = agent.choose_action(observation)
             while not env.is_allowed_move(observation, action):
                 action = agent.choose_action(observation)
@@ -58,9 +66,9 @@ def train(agent, env, n_episodes, n_steps, plot, filename):
 
         avg_score = np.mean(scores[-100:])
 
-        # print('episode ', i, 'score %.2f' % score,
-        #         'average score %.2f' % avg_score,
-        #         'epsilon %.2f' % agent.epsilon)
+        print('episode ', i, 'score %.2f' % score,
+                'average score %.2f' % avg_score,
+                'epsilon %.2f' % agent.epsilon)
         
     print("Wins:", wins)
     print("Deaths:", deaths)
@@ -90,19 +98,23 @@ def evaluate_parameters(gamma, lr, batch_size, max_mem_size, eps_end, eps_dec):
 
 
 if __name__ == "__main__":
-    eps_decays = [5e-3,5e-4,5e-5]
-    max_mem_sizes = [10, 100, 500, 1000, 2000, 10000, 100000]
-    batch_sizes = [1,4,16,32,64,128]
-    learning_rates = [0.1, 0.01, 0.001, 0.0001]
-    eps_ends = [0.01, 0.05, 0.1]
+    env = Maze(environment)
+    agent = Agent(1, 1, 0.001, [1], 1, 4, 1, eps_dec=0.0005, eps_end=0.05)
+    train(agent, env, 1500, 25, False, '')
 
-    for mem_size in max_mem_sizes:
-        for batch_size in batch_sizes:
-            for lr in learning_rates:
-                for dec in eps_decays:
-                    for end in eps_ends:
-                        avg = evaluate_parameters(1,lr, batch_size, mem_size, end, dec)
-                        print(f"WIN PCT for eval_gamma_{1}_lr_{lr}_batch_{batch_size}_mem_{mem_size}_epsend_{end}_epsdec_{dec}: {avg}")
+
+
+
+    # eps_decays = [5e-3,5e-4,5e-5]
+    # max_mem_sizes = [10, 100, 500, 1000, 2000, 10000, 100000]
+    # batch_sizes = [1,4,16,32,64,128]
+    # # learning_rates = [0.1, 0.01, 0.001, 0.0001]
+    # # eps_ends = [0.01, 0.05, 0.1]
+
+    # for mem_size in max_mem_sizes:
+    #     for batch_size in batch_sizes:
+    #         avg = evaluate_parameters(1,0.001, batch_size, mem_size, 0.05, 5e-4)
+    #         print(f"WIN PCT for eval_{batch_size}_mem_{mem_size}: {avg}")
 
 
 
