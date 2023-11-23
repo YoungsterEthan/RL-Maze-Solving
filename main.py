@@ -11,27 +11,61 @@ from utils import plotLearning
 ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
 action_to_int = {'U': 0, 'D': 1, 'L': 2, 'R': 3}
 
-# environment = """
-# A00000000x
-# 0000000000
-# 0000000000
-# 0011111000
-# 0010G01000
-# 0010001000
-# 0000000000
-# 0000000000
-# 0000000000
-# x00000000x
-# """
+#TODO ADD PENALTY FOR ATTEMPTING TO MOVE IN AN BLOCKED DIRECTION (HITTING A WALL) OR INVALID DIRECTION (ATTEMPTING TO GO OUT OF BOUNDS)
 
 environment = """
-A00
-000
-x0G
+A000000000
+0000000000
+0000000000
+0011111000
+0010G01000
+0010001000
+0000000000
+0000000000
+0000000000
+0000000000
 """
 
+# environment = """
+# A00
+# 000
+# x0G
+# """
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
-def train(agent, env, n_episodes, n_steps, plot, filename):
+def plot_state_action_values(model, state, action_space):
+    """
+    Plot the Q-values for all actions from a given state.
+
+    :param model: The Q-network model
+    :param state: The state for which to plot the Q-values
+    :param action_space: The range of possible actions
+    """
+    # Ensure the model is in evaluation mode
+    model.eval()
+    
+    # Convert the state to a tensor if it's not already
+    if not isinstance(state, torch.Tensor):
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+
+    # Pass the state through the model to get Q-values
+    with torch.no_grad():
+        q_values = model(state).squeeze().cpu().numpy()  # Remove batch dimension and move to CPU
+
+    # Generate the plot
+    plt.figure(figsize=(10, 6))
+    plt.bar(range(len(action_space)), q_values)
+    plt.xlabel('Actions')
+    plt.ylabel('Q-value')
+    plt.title('Q-values for Different Actions from a Given State')
+    plt.xticks(range(len(action_space)), labels=action_space)
+    plt.show()
+
+
+
+def train(agent, env:Maze, n_episodes, n_steps, plot, filename):
     deaths = 0
     wins = 0
     scores = []
@@ -42,7 +76,7 @@ def train(agent, env, n_episodes, n_steps, plot, filename):
         done = False
         observation = env.reset()
         while not done and step < n_steps:
-            print(step)
+            # print(step)
             action = agent.choose_action(observation)
             while not env.is_allowed_move(observation, action):
                 action = agent.choose_action(observation)
@@ -53,6 +87,7 @@ def train(agent, env, n_episodes, n_steps, plot, filename):
             agent.learn()
             observation = observation_
             step +=1
+            # print(env.maze)
 
             if done:
                 if info == "goal":
@@ -99,9 +134,9 @@ def evaluate_parameters(gamma, lr, batch_size, max_mem_size, eps_end, eps_dec):
 
 if __name__ == "__main__":
     env = Maze(environment)
-    agent = Agent(1, 1, 0.001, [1], 1, 4, 1, eps_dec=0.0005, eps_end=0.05)
-    train(agent, env, 1500, 25, False, '')
-
+    agent = Agent(0.75, 1, 0.001, [1], 512, 4, 10000, eps_dec=0.0001, eps_end=0.05)
+    train(agent, env, 1000, 150, False, '')
+    plot_state_action_values(agent.Q_eval, 54, [0,1,2,3])
 
 
 

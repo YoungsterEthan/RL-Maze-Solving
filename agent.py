@@ -45,6 +45,7 @@ class Agent(object):
         self.batch_size = batch_size
         self.mem_cntr = 0
         self.iter_cntr = 0
+        self.learn_step_counter = 0
         self.replace_target = 100
 
         self.Q_eval = DeepQNetwork(lr, n_actions=n_actions,
@@ -72,6 +73,7 @@ class Agent(object):
             state = torch.tensor([observation]).to(self.Q_eval.device)
             actions = self.Q_eval.forward(state)
             action = torch.argmax(actions).item()
+            # print("LEARNED ACTION", action)
         else:
             action = np.random.choice(self.action_space)
 
@@ -121,11 +123,18 @@ class Agent(object):
         q_next = self.Q_target.forward(new_state_batch)
         q_next[terminal_batch] = 0.0
 
-        q_target = reward_batch + self.gamma * q_next[batch_index, max_actions]
+        q_target = reward_batch + (self.gamma * q_next[batch_index, max_actions])
 
         loss = self.Q_eval.loss(q_target, q_eval).to(self.Q_eval.device)
         loss.backward()
         self.Q_eval.optimizer.step()
+
+        # Increment the learning step counter
+        # self.learn_step_counter += 1
+
+        # Check if it's time to update the target network
+        # if self.learn_step_counter % self.replace_target == 0:
+        #     self.Q_target.load_state_dict(self.Q_eval.state_dict())
 
         self.iter_cntr += 1
         self.update_exploration_probability()
