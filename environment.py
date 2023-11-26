@@ -3,7 +3,7 @@ from collections import deque
 import random
 import math
 
-ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
+ACTIONS = {0: (0, -1), 1: (1, 0), 2: (0, 1), 3: (-1, 0)}
 
 
 
@@ -22,6 +22,7 @@ class Maze(object):
         self.allowed_states = [] # for now, this is none
         self.visited_states = set()
         self.last_five_states = deque(maxlen=5)
+        self.state_history = deque(maxlen=5) 
         # self.construct_allowed_states() # not implemented yet
 
 
@@ -61,9 +62,8 @@ class Maze(object):
         self.steps = 0
         self.create_maze_from_string(self.m_str)
         self.robot_position = (0,0)
-        # self.visited_states = set()
-        distance = math.sqrt(((0 - self.goal_position[0]) ** 2) + ((0-self.goal_position[1]) ** 2))
-        return 0
+        self.visited_states = set()
+        return self.maze.flatten()
     
     def print_last_five_states(self):
             print("Last Five States of the Maze:")
@@ -72,18 +72,6 @@ class Maze(object):
                 print(state)
                 print()  # Newline for better readability
 
-    def construct_allowed_states(self):
-        allowed_states = {}
-        for y, row in enumerate(self.maze):
-            for x, col in enumerate(row):
-                # iterate through all spaces
-                if self.maze[(y,x)] != 1:
-                    state = (y * self.rows) + x
-                    allowed_states[state] = []
-                    for action in ACTIONS:
-                        if self.is_allowed_move((y,x), action):
-                            allowed_states[state].append(action)
-        self.allowed_states = allowed_states
 
     def is_allowed_move(self, state, action):
         # state = int(state[0])
@@ -115,62 +103,70 @@ class Maze(object):
             
         
     def update_maze(self, action):
+        self.enemy_move()
         y, x = self.robot_position
-        self.maze[y, x] = 0  # set the current position to empty
-        # self.enemy_move()
-        
-        
-
-        y += ACTIONS[action][0]
-        x += ACTIONS[action][1]
-        self.robot_position = (y, x)
-        new_state = (y * self.rows) + x
-
         status = 'normal'
-        # Check if new position is a goal or a kill spot
-        if self.maze[y, x] == 3:
-            self.is_over = True
-            status = 'goal'
-        elif self.maze[y, x] == 2:
-            self.is_over = True
-            status = 'dead'
-        else:
+        position = (y * self.rows) + x
+        state = self.maze.flatten()
+        mode = 'valid' if self.is_allowed_move(position, action) else "invalid"
+        new_state = state
+
+        if mode == 'valid':
+            self.maze[y, x] = 0  # set the current position to empty
+            # self.enemy_move()
+
+            y += ACTIONS[action][0]
+            x += ACTIONS[action][1]
+            self.robot_position = (y, x)
+
             status = 'normal'
+            # Check if new position is a goal or a kill spot
+            if self.maze[y, x] == 3:
+                self.is_over = True
+                status = 'goal'
+            elif self.maze[y, x] == 2:
+                self.is_over = True
+                status = 'dead'
 
-        distance = math.sqrt(((y - self.goal_position[0]) ** 2) + ((x-self.goal_position[1]) ** 2))
+            self.maze[y, x] = 4  
+            new_state = self.maze.flatten()
+        # else:
+        #     self.print_last_five_states()
+        self.state_history.append(new_state)
 
-        self.maze[y, x] = 4  
         self.steps += 1
-        return new_state, distance, status
+        return new_state, mode, status
     
     def time_decay_penalty(self):
         # Decrease the reward every 100 steps
-        penalty = -1 - (self.steps // 5)
+        penalty = -0.5 - (self.steps // 10)
         return penalty
 
-    def give_reward(self, status, new_state):
-        # status = self.update_maze()  
-        # time_penalty = self.time_decay_penalty()
-        state = new_state
-        explore_reward = 0
-        if new_state not in self.visited_states:
-            explore_reward = 1  # Small positive reward for exploring a new state
-            self.visited_states.add(state)
-
+    def give_reward(self, status, new_state, mode):
+        time_penalty = self.time_decay_penalty()
 
         if status == 'goal':
-            return 100 
+            return 100
         elif status == 'dead':
             return -50 
         else:
-            return -1
+            if mode == 'invalid':
+                return -2
+            else:
+                return -1
+        
+    def detect_oscillation(self, new_state):
+        # Check if new_state is the same as one of the last few states
+        if new_state in self.state_history:
+            # print("Oscilation+penalty")
+            return True
+        return False
+    
         
     def step(self, action):
-        new_state, distance, status = self.update_maze(action)
-        # print("DISTANCE", distance)
-        extended_state = np.append(new_state, distance) 
+        new_state, mode, status = self.update_maze(action)
         self.last_five_states.append(np.copy(self.maze))
-        reward = self.give_reward(status, new_state)
+        reward = self.give_reward(status, new_state, mode)
         is_over = self.is_game_over(status)
         return new_state, reward, is_over, status
 
