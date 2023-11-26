@@ -103,4 +103,4 @@ def train(agent, env:Maze, n_episodes, n_steps):
 if __name__ == "__main__":
     env = Maze(environment_three)
     agent = DDQNAgent(1, 1, 0.00001, 4, [100], 100000, 512, env_name="maze", algo="ddqn")
-    train(agent, env, 2500, 150, False, '')
+    train(agent, env, 2500, 150)
