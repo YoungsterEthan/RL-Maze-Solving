@@ -36,21 +36,20 @@ class DeepQNetwork(nn.Module):
 
         return actions
     
-    def save_checkpoint(self):
+    def save_checkpoint(self, check_point):
         print('... saving checkpoint ...')
-        T.save(self.state_dict(), self.checkpoint_file)
+        T.save(self.state_dict(), self.check_point)
 
-    def load_checkpoint(self):
-        print(f'... loading checkpoint from {self.checkpoint_file} ...')
-        self.load_state_dict(T.load(self.checkpoint_file))
+    def load_checkpoint(self, check_point):
+        print(f'... loading checkpoint from {check_point} ...')
+        self.load_state_dict(T.load(check_point))
  
 
-    
-ACTIONS = {0: (-1, 0), 1: (1, 0), 2: (0, -1), 3: (0, 1)}
+
 
 class DDQNAgent(object):
     def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
-                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-6,
+                 mem_size, batch_size, eps_min=0, eps_dec=5e-6,
                  replace=1000, algo=None, env_name=None, chkpt_dir='agent_weights/'):
         self.gamma = gamma
         self.epsilon = epsilon
@@ -144,13 +143,13 @@ class DDQNAgent(object):
 
         self.decrement_epsilon()
 
-    def save_models(self):
-        self.q_eval.save_checkpoint()
-        self.q_next.save_checkpoint()
+    def save_models(self, check_point):
+        self.q_eval.save_checkpoint(check_point)
+        self.q_next.save_checkpoint(check_point)
 
-    def load_models(self):
-        self.q_eval.load_checkpoint()
-        self.q_next.load_checkpoint()
+    def load_models(self,check_point):
+        self.q_eval.load_checkpoint(check_point)
+        self.q_next.load_checkpoint(check_point)
 
 
 

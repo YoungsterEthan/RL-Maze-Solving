@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import seaborn as sns
-from utils import plotLearning
+from utils import *
 import time
 ACTIONS = {0: (0, -1), 1: (1, 0), 2: (0, 1), 3: (-1, 0)}
 action_to_int = {'L': 0, 'D': 1, 'R': 2, 'U': 3}
@@ -65,6 +65,7 @@ def train(agent, env:Maze, n_episodes, n_steps):
         done = False
         observation = env.reset()
         while not done and step < n_steps:
+            print(env.maze)
             action = agent.choose_action(observation)
             observation_, reward, done, info = env.step(action)
             score += reward
@@ -78,7 +79,7 @@ def train(agent, env:Maze, n_episodes, n_steps):
                 if info == "goal":
                     print("Goal")
                     if wins % 10 == 0:
-                        env.print_last_five_states()
+                        env.print_last_n_states()
                     wins+=1
                 elif info =="dead":
                     print('Dead')
@@ -101,6 +102,11 @@ def train(agent, env:Maze, n_episodes, n_steps):
 
 
 if __name__ == "__main__":
-    env = Maze(environment_three)
-    agent = DDQNAgent(1, 1, 0.00001, 4, [100], 100000, 512, env_name="maze", algo="ddqn")
-    train(agent, env, 2500, 150)
+    env = Maze(environment_one)
+    agent = DDQNAgent(1, 0, 0.00000, 4, [100], 100000, 512, env_name="maze", algo="ddqn")
+    agent.load_models('agent_weights/maze_one_solved')
+    train(agent, env, 1, 150)
+    show(env)
+    # policy = generate_policy(agent, env, env.rows, env.columns)
+    # print(policy)
+    # visualize_path(policy, (0,0), (4,4))

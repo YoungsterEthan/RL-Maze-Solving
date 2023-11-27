@@ -21,7 +21,8 @@ class Maze(object):
         self.steps = 0 # contains num steps robot took
         self.allowed_states = [] # for now, this is none
         self.visited_states = set()
-        self.last_five_states = deque(maxlen=5)
+        self.n = 10
+        self.last_n_states = deque(maxlen=self.n)
         self.state_history = deque(maxlen=5) 
         # self.construct_allowed_states() # not implemented yet
 
@@ -63,11 +64,12 @@ class Maze(object):
         self.create_maze_from_string(self.m_str)
         self.robot_position = (0,0)
         self.visited_states = set()
+        self.visited_states.add((0,0))
         return self.maze.flatten()
     
-    def print_last_five_states(self):
-            print("Last Five States of the Maze:")
-            for i, state in enumerate(self.last_five_states):
+    def print_last_n_states(self):
+            print(f"Last {self.n} States of the Maze:")
+            for i, state in enumerate(self.last_n_states):
                 print(f"State {i + 1}:")
                 print(state)
                 print()  # Newline for better readability
@@ -103,7 +105,7 @@ class Maze(object):
             
         
     def update_maze(self, action):
-        self.enemy_move()
+        # self.enemy_move()
         y, x = self.robot_position
         status = 'normal'
         position = (y * self.rows) + x
@@ -118,6 +120,7 @@ class Maze(object):
             y += ACTIONS[action][0]
             x += ACTIONS[action][1]
             self.robot_position = (y, x)
+            self.visited_states.add(self.robot_position)
 
             status = 'normal'
             # Check if new position is a goal or a kill spot
@@ -165,7 +168,7 @@ class Maze(object):
         
     def step(self, action):
         new_state, mode, status = self.update_maze(action)
-        self.last_five_states.append(np.copy(self.maze))
+        self.last_n_states.append(np.copy(self.maze))
         reward = self.give_reward(status, new_state, mode)
         is_over = self.is_game_over(status)
         return new_state, reward, is_over, status
